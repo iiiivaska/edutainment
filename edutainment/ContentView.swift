@@ -14,17 +14,85 @@ struct questionAndAnswer {
 
 struct ContentView: View {
     
+    @State var score = 0
+    @State var numberOfQuestion = 0
     @State var menuSelect = true
     @State var mulTable = 1
     @State var selectedCountOfQuestions = "1"
     @State var questions: Array<questionAndAnswer> = []
-    
+    @State var answer: String = ""
+    @State var endGame = false
+    @FocusState private var amountIsFocused: Bool
+    @State var bottomColor: Color? = nil
     var body: some View {
         if (menuSelect) {
             menu()
         } else {
-            Text("Game")
+            game()
+                .alert(isPresented: $endGame) {
+                    Alert(title: Text("Finish"), message: Text("Your score is \(score)/\(self.questions.count)"), dismissButton: .default(Text("Continue")) {
+                        withAnimation {
+                            self.menuSelect.toggle()
+                        }
+                        self.score = 0
+                        self.answer = ""
+                        self.numberOfQuestion = 0
+                        self.selectedCountOfQuestions = "1"
+                    })
+                }
         }
+    }
+    
+    func game() -> some View {
+        NavigationView {
+            Form {
+                Section {
+                    Text("What is \(questions[numberOfQuestion].question)")
+                        .font(.headline)
+                        .padding()
+                    TextField("Answer", text: $answer)
+                        .keyboardType(.decimalPad)
+                        .focused($amountIsFocused)
+                }
+                Button("Take my answer") {
+                    nextQuestion()
+                }
+                .foregroundColor(bottomColor)
+                Button("Menu") {
+                    self.endGame.toggle()
+                }
+            }
+            .navigationTitle("Game")
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    
+                    Button("Done") {
+                        nextQuestion()
+                        amountIsFocused = false
+                    }
+                }
+            }
+        }
+    }
+    
+    func nextQuestion() {
+        if (questions[numberOfQuestion].answer.elementsEqual(self.answer)) {
+            self.score += 1
+            withAnimation() {
+                self.bottomColor = Color.green
+            }
+        } else {
+            withAnimation() {
+                self.bottomColor = Color.red
+            }
+        }
+        if (self.numberOfQuestion + 1 == self.questions.count) {
+            self.endGame.toggle()
+            return
+        }
+        self.answer = ""
+        self.numberOfQuestion += 1
     }
     
     func menu() -> some View {
@@ -51,9 +119,11 @@ struct ContentView: View {
                     .pickerStyle(.wheel)
                 }
                 Button("Start game"){
-                    self.menuSelect.toggle()
                     setDictionary()
-                    print(questions)
+                    withAnimation {
+                        self.menuSelect.toggle()
+                    }
+                    //print(questions)
                 }
             }
             .navigationTitle("Menu")
@@ -87,19 +157,16 @@ struct ContentView: View {
     
     func setDictionary(){
         var questions: Array<questionAndAnswer> = []
-        let countOfQuestions = Int(selectedCountOfQuestions) ?? mulTable*mulTable
-//        var randomElemnt: Int
-        for x in 1...12 {
-            for y in 1...12 {
+        var countOfQuestions = Int(selectedCountOfQuestions) ?? (mulTable*mulTable - 1)
+        if (selectedCountOfQuestions.elementsEqual("1") && mulTable > 2) {
+            countOfQuestions = 5
+        }
+        for x in 1...mulTable {
+            for y in 1...mulTable {
                 questions.append(questionAndAnswer(question: "\(x)x\(y)", answer: "\(x * y)"))
             }
         }
         self.questions = Array(questions.shuffled()[0..<countOfQuestions])
-//        if (selectedCountOfQuestions.elementsEqual("All")) {
-//            randomElemnt = Int.random(in: 0...(self.mulTable*self.mulTable))
-//        } else {
-//            randomElemnt = Int.random(in: 0...(Int(self.selectedCountOfQuestions)!*Int(self.selectedCountOfQuestions)!))
-//        }
     }
 }
 
